@@ -13,12 +13,9 @@ from pyspark.ml.classification import MultilayerPerceptronClassifier
 # Create the spark session context.
 spark = SparkSession.builder.appName("train").getOrCreate()
 spark.sparkContext.setLogLevel("Error")
-print("########## SPARK VERSION:", spark.version)
-print("########## SPARK CONTEXT:", spark.sparkContext)
+print("########## Spark Ver:", spark.version)
+print("########## Spark Context:", spark.sparkContext)
 
-###############################################################################
-################################ READ DATA ####################################
-###############################################################################
 # Read data from HDFS. 
 print("Reading data from {}...".format(sys.argv[1]))
 training = spark.read.format("csv").load(sys.argv[1], header=True, sep=";")
@@ -52,9 +49,6 @@ va_df = va.transform(training)
 va_df = va_df.select(["features", "label"])
 training = va_df
 
-###############################################################################
-######################### TRAIN AND SAVE THE MODEL ############################
-###############################################################################
 # Specify the layers.
 layers = [11, 8, 8, 8, 8, 10]
 
