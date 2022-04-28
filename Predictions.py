@@ -1,18 +1,18 @@
-import random
 import sys
+import random
 
 from pyspark.sql import SparkSession
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql.types import IntegerType, DoubleType
 from pyspark.sql.functions import col, desc
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.classification import MultilayerPerceptronClassificationModel
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 # Create the Spark Session
 spark = SparkSession.builder.appName("CS643-Wine-Quality-Predictions").getOrCreate()
 spark.sparkContext.setLogLevel("ERROR...ABORT")
-print("########## SPARK VER.:", spark.version)
-print("########## SPARK CONTEXT:", spark.sparkContext)
+print("########## Spark Ver:", spark.version)
+print("########## Spark Context:", spark.sparkContext)
 
 
 # Read the data from the csv file
