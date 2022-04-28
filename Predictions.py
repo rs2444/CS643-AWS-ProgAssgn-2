@@ -11,8 +11,8 @@ from pyspark.ml.classification import MultilayerPerceptronClassificationModel
 # Create the Spark Session
 spark = SparkSession.builder.appName("CS643-Wine-Quality-Predictions").getOrCreate()
 spark.sparkContext.setLogLevel("ERROR...ABORT")
-print("########## Spark Ver:", spark.version)
-print("########## Spark Context:", spark.sparkContext)
+print("########## SPARK VERSION:", spark.version)
+print("########## SPARK CONTEXT:", spark.sparkContext)
 
 
 # Read the data from the csv file
@@ -64,4 +64,4 @@ print("Accuracy = %g " % accuracy)
 evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="f1")
 f1 = evaluator.evaluate(predictions)
 print("F1 = %g " % f1)
-print("Model prediction has completed...going to exit this.")
+print("Model prediction finished...terminating.")
