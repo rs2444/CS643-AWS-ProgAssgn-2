@@ -1,65 +1,85 @@
-import numpy as np
 import random
 import sys 
+import numpy as np
+import pandas as pd
+import quinn
 
-from pyspark.ml.feature import VectorAssembler
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.sql import SparkSession
 from pyspark.sql.types import IntegerType, DoubleType
 from pyspark.sql.functions import col, desc
-from pyspark.ml.classification import MultilayerPerceptronClassifier
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import VectorAssembler, Normalizer, StandardScaler
+from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+from pyspark.ml import Pipeline
+
+spark = SparkSession \
+    .builder \
+    .appName("CS643_Wine_Quality_Predictions_Project") \
+    .getOrCreate()
+
+## Load Training Dataset
+train_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('/home/ubuntu/CS643-AWS-ProgAssgn-2/TrainingDataset.csv')
+validation_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('/home/ubuntu/CS643-AWS-ProgAssgn-2/ValidationDataset.csv')
+
+print("Data loaded from local directory on Master EC2 Instance.")
+print(train_df.toPandas().head())
+
+def remove_quotations(s):
+    return s.replace('"', '')
+
+train_df = quinn.with_columns_renamed(remove_quotations)(train_df)
+train_df = train_df.withColumnRenamed('quality', 'label')
+
+validation_df = quinn.with_columns_renamed(remove_quotations)(validation_df)
+validation_df = validation_df.withColumnRenamed('quality', 'label')
+
+print("Data has been formatted.")
+print(train_df.toPandas().head())
+
+assembler = VectorAssembler(
+    inputCols=["fixed acidity",
+               "volatile acidity",
+               "citric acid",
+               "residual sugar",
+               "chlorides",
+               "free sulfur dioxide",
+               "total sulfur dioxide",
+               "density",
+               "pH",
+               "sulphates",
+               "alcohol"],
+                outputCol="inputFeatures")
+
+scaler = Normalizer(inputCol="inputFeatures", outputCol="features")
+
+lr = LogisticRegression()
+rf = RandomForestClassifier()
+
+pipeline1 = Pipeline(stages=[assembler, scaler, lr])
+pipeline2 = Pipeline(stages=[assembler, scaler, rf])
+
+paramgrid = ParamGridBuilder().build()
+
+evaluator = MulticlassClassificationEvaluator(metricName="f1")
+
+crossval = CrossValidator(estimator=pipeline1,  
+                         estimatorParamMaps=paramgrid,
+                         evaluator=evaluator, 
+                         numFolds=3
+                        )
+
+cvModel1 = crossval.fit(train_df) 
+print("F1 Score for LogisticRegression Model: ", evaluator.evaluate(cvModel1.transform(validation_df)))
 
 
-# Create the spark session context.
-spark = SparkSession.builder.appName("train").getOrCreate()
-spark.sparkContext.setLogLevel("Error")
-print("########## Spark Ver:", spark.version)
-print("########## Spark Context:", spark.sparkContext)
+crossval = CrossValidator(estimator=pipeline2,  
+                         estimatorParamMaps=paramgrid,
+                         evaluator=evaluator, 
+                         numFolds=3
+                        )
 
-# Read data from HDFS. 
-print("Reading data from {}...".format(sys.argv[1]))
-training = spark.read.format("csv").load(sys.argv[1], header=True, sep=";")
+cvModel2 = crossval.fit(train_df) 
+print("F1 Score for RandomForestClassifier Model: ", evaluator.evaluate(cvModel2.transform(validation_df)))
 
-# Change column names and extract feature names.
-training = training.toDF("fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol", "label")
-training.show(5, False)
-
-# Ensure proper data types.
-training = training \
-        .withColumn("fixed_acidity", col("fixed_acidity").cast(DoubleType())) \
-        .withColumn("volatile_acidity", col("volatile_acidity").cast(DoubleType())) \
-        .withColumn("citric_acid", col("citric_acid").cast(DoubleType())) \
-        .withColumn("residual_sugar", col("residual_sugar").cast(DoubleType())) \
-        .withColumn("chlorides", col("chlorides").cast(DoubleType())) \
-        .withColumn("free_sulfur_dioxide", col("free_sulfur_dioxide").cast(IntegerType())) \
-        .withColumn("total_sulfur_dioxide", col("total_sulfur_dioxide").cast(IntegerType())) \
-        .withColumn("density", col("density").cast(DoubleType())) \
-        .withColumn("pH", col("pH").cast(DoubleType())) \
-        .withColumn("sulphates", col("sulphates").cast(DoubleType())) \
-        .withColumn("alcohol", col("alcohol").cast(DoubleType())) \
-        .withColumn("label", col("label").cast(IntegerType()))
-
-# Extract feature names. 
-features = training.columns
-features = features[:-1]
-
-# Convert the read data to the proper feature vector with predicted label format.
-va = VectorAssembler(inputCols=features, outputCol="features")
-va_df = va.transform(training)
-va_df = va_df.select(["features", "label"])
-training = va_df
-
-# Specify the layers.
-layers = [11, 8, 8, 8, 8, 10]
-
-# Declare the model.
-tr = MultilayerPerceptronClassifier(maxIter=1000, layers=layers, blockSize=64, stepSize=0.03, solver='l-bfgs')
-
-# Fit the model.
-print("Training...")
-trModel = tr.fit(training)
-
-# Save the model. 
-print("Saving file to {}...".format(sys.argv[2]))
-trModel.write().overwrite().save(sys.argv[2])
-print("Model saved... terminating.")
+print("Since the LogisticRegression Model has a higher score than the RandomForestClassifier model, we use this one in our prediction application.")
