@@ -5,4 +5,6 @@ ENV PYSPARK_MAJOR_PYTHON_VERSION=3
 WORKDIR /opt/wine-pred-app
 RUN conda install numpy
 
-COPY predict.py .
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
+
+COPY Predictions.py .
