@@ -1,10 +1,9 @@
-FROM datamechanics/spark:3.1-latest
+FROM fokkodriesprong/docker-pyspark
 
-ENV PYSPARK_MAJOR_PYTHON_VERSION=3
+WORKDIR /home/ubuntu/CS643-AWS-ProgAssgn-2
 
-WORKDIR /opt/wine-pred-app
-RUN conda install numpy
+COPY . /home/ubuntu/CS643-AWS-ProgAssgn-2
 
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-COPY Predictions.py .
+CMD ["python", "Predictions.py"]
