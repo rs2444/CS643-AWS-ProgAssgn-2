@@ -6,8 +6,8 @@ from pyspark.sql.session import SparkSession
 sc = SparkContext('local')
 spark = SparkSession(sc)
 
-train_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('/home/ubuntu/CS643-AWS-ProgAssgn-2/TrainingDataset.csv')
-test_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('/home/ubuntu/CS643-AWS-ProgAssgn-2/TestDataset.csv')
+train_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('s3a://cs643finalproject/TrainingDataset.csv')
+test_df = spark.read.format('csv').options(header='true', inferSchema='true', sep=';').load('s3a://cs643finalproject/TestDataset.csv')
 
 print("Data loaded into Spark.")
 print(train_df.toPandas().head())
