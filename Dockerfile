@@ -1,8 +1,8 @@
 FROM fokkodriesprong/docker-pyspark
 
-WORKDIR /home/ubuntu/CS643-AWS-ProgAssgn-2
+WORKDIR /app
 
-COPY . /home/ubuntu/CS643-AWS-ProgAssgn-2
+COPY . /app
 
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
